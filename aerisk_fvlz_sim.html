@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test bench · Safeguarded dispatch Fuerteventura–Lanzarote</title>
+<style>
+:root{
+  --basalt:#1F2933; --slate:#4A5A68; --mist:#E8ECEF; --paper:#FDFDFC;
+  --atlantic:#1F6F8B; --trade:#2E9E8F; --sand:#D9A441; --alert:#B23A2E;
+  --rule:#CFD8DE;
+  --mono:"IBM Plex Mono","SF Mono",ui-monospace,"DejaVu Sans Mono",monospace;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--basalt);font-family:var(--sans);
+     font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px 72px}
+
+/* ---------- header: the synthetic-data label presides over the page ------ */
+header{border-bottom:2px solid var(--basalt);padding:30px 0 16px;margin-bottom:26px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+         text-transform:uppercase;color:var(--slate)}
+h1{font-size:clamp(24px,3.4vw,36px);line-height:1.12;margin:10px 0 6px;
+   font-weight:600;letter-spacing:-.015em;max-width:23ch}
+.sub{color:var(--slate);max-width:66ch;margin:0}
+.warn{display:inline-block;margin-top:14px;padding:6px 11px;border:1px solid var(--alert);
+      color:var(--alert);font-family:var(--mono);font-size:11.5px;letter-spacing:.03em}
+
+/* ---------- layout ---------- */
+.grid{display:grid;grid-template-columns:290px 1fr;gap:30px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+
+/* ---------- panel de mandos ---------- */
+.panel{border:1px solid var(--rule);padding:18px 17px 20px;position:sticky;top:18px}
+@media(max-width:900px){.panel{position:static}}
+.panel h2{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+          text-transform:uppercase;color:var(--slate);margin:0 0 16px;font-weight:500}
+.ctrl{margin-bottom:17px}
+.ctrl label{display:flex;justify-content:space-between;align-items:baseline;
+            font-size:12.5px;margin-bottom:5px}
+.ctrl .val{font-family:var(--mono);font-size:12.5px;color:var(--atlantic);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--trade);margin:0}
+select{width:100%;padding:6px 8px;border:1px solid var(--rule);background:#fff;
+        font-family:var(--sans);font-size:13px;color:var(--basalt)}
+.hint{font-size:11px;color:var(--slate);margin-top:4px;line-height:1.35}
+button{width:100%;padding:11px;border:none;background:var(--basalt);color:#fff;
+       font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+       cursor:pointer;margin-top:4px}
+button:hover{background:var(--atlantic)}
+button:disabled{background:var(--slate);cursor:progress}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--sand);outline-offset:2px}
+.preset{display:flex;gap:6px;margin-bottom:16px}
+.preset button{flex:1;padding:7px 2px;font-size:10px;background:#fff;color:var(--slate);
+               border:1px solid var(--rule);letter-spacing:.04em}
+.preset button:hover{border-color:var(--atlantic);color:var(--atlantic);background:#fff}
+.preset button[aria-pressed=true]{background:var(--basalt);color:#fff;border-color:var(--basalt)}
+
+/* ---------- resultados ---------- */
+section{margin-bottom:34px}
+section > h3{font-size:15px;margin:0 0 3px;font-weight:600}
+section > p.lead{color:var(--slate);font-size:13px;margin:0 0 14px;max-width:74ch}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--mist)}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+         text-transform:uppercase;color:var(--slate);border-bottom:1px solid var(--basalt);
+         font-weight:500}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.pol-A td:first-child{border-left:3px solid var(--alert);padding-left:9px}
+tr.pol-B td:first-child{border-left:3px solid var(--trade);padding-left:9px}
+tr.pol-D td:first-child{border-left:3px solid var(--atlantic);padding-left:9px}
+tr.pol-C td:first-child{border-left:3px solid var(--slate);padding-left:9px}
+td.best{color:var(--trade);font-weight:600}
+td.worst{color:var(--alert)}
+
+/* ---------- elemento distintivo: la cinta de riesgo ---------- */
+.ribbon-box{border:1px solid var(--rule);padding:14px 15px 10px}
+.ribbon-legend{display:flex;gap:18px;font-family:var(--mono);font-size:10.5px;
+               color:var(--slate);margin-top:8px;flex-wrap:wrap}
+.swatch{display:inline-block;width:11px;height:11px;margin-right:5px;vertical-align:-1px}
+canvas{display:block;width:100%;image-rendering:auto}
+.figcap{font-size:11.5px;color:var(--slate);margin-top:9px;line-height:1.4}
+
+.status{font-family:var(--mono);font-size:11.5px;color:var(--slate);margin-top:10px;
+        min-height:1.3em}
+footer{border-top:1px solid var(--rule);margin-top:44px;padding-top:18px;
+       font-size:11.5px;color:var(--slate);max-width:80ch}
+footer code{font-family:var(--mono);font-size:11px;background:var(--mist);padding:1px 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Supplementary material · executable test bench</div>
+  <h1>Safeguarded dispatch in the Fuerteventura&#8209;Lanzarote system</h1>
+  <p class="sub">Reproduces in the browser the hourly commitment and dispatch model described
+  in the article: two nodes joined by the 132&nbsp;kV link, sixteen thermal units,
+  N&#8209;1 criterion with deliverability, and four reserve allocation policies. Change
+  the parameters and simulate the 8,760 hours again.</p>
+  <span class="warn">Calibrated synthetic series — not observed data from the real system</span>
+</header>
+
+<div class="grid">
+
+  <form class="panel" id="panel" onsubmit="return false">
+    <h2>Parameters</h2>
+
+    <div class="preset" role="group" aria-label="Escenarios predefinidos">
+      <button type="button" id="pS0" aria-pressed="true">2025 base</button>
+      <button type="button" id="pS1" aria-pressed="false">2030 target</button>
+    </div>
+
+    <div class="ctrl">
+      <label for="wind">Wind capacity <span class="val" id="windV">105.6 MW</span></label>
+      <input type="range" id="wind" min="0" max="700" step="5" value="106">
+    </div>
+
+    <div class="ctrl">
+      <label for="pv">Solar PV capacity <span class="val" id="pvV">61.2 MW</span></label>
+      <input type="range" id="pv" min="0" max="400" step="5" value="61">
+    </div>
+
+    <div class="ctrl">
+      <label for="ks">Forecast error scale <span class="val" id="ksV">1.00</span></label>
+      <input type="range" id="ks" min="0.25" max="2.5" step="0.05" value="1">
+      <div class="hint">Scales the demand, wind, and solar PV uncertainty.</div>
+    </div>
+
+    <div class="ctrl">
+      <label for="rho">Gate threshold ρ<sub>on</sub> <span class="val" id="rhoV">0.30</span></label>
+      <input type="range" id="rho" min="0.02" max="0.5" step="0.01" value="0.30">
+      <div class="hint">Residual risk of the automatic recommendation above which
+      the robust setpoint is activated.</div>
+    </div>
+
+    <div class="ctrl">
+      <label for="seed">Seed <span class="val" id="seedV">1</span></label>
+      <input type="range" id="seed" min="1" max="60" step="1" value="1">
+    </div>
+
+    <div class="ctrl">
+      <label for="week">Week shown in detail</label>
+      <select id="week"></select>
+    </div>
+
+    <button type="button" id="run">Simulate the year</button>
+    <div class="status" id="status">Ready.</div>
+  </form>
+
+  <main>
+    <section>
+      <h3>Annual result per policy</h3>
+      <p class="lead">The four policies run on the same physical realization
+      (common random numbers), so that every difference is attributable to the reserve
+      allocation rule and not to chance.</p>
+      <table id="tbl">
+        <thead><tr>
+          <th>Policy</th><th>Cost<br>M€/yr</th><th>Violat.<br>N‑1 (h)</th>
+          <th>ENS<br>MWh</th><th>Curtailment<br>GWh</th><th>CO₂<br>kt</th>
+          <th>Start-ups</th><th>Safeguard<br>% of year</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h3>Risk ribbon</h3>
+      <p class="lead">Each vertical strip is one hour of the year, ordered from January to December.
+      Height encodes the residual risk ρ<sub>t</sub> of the automatic recommendation; color,
+      whether the safeguard was active. The horizontal line marks the threshold in force.</p>
+      <div class="ribbon-box">
+        <canvas id="ribbon" height="150"></canvas>
+        <div class="ribbon-legend">
+          <span><i class="swatch" style="background:var(--trade)"></i>safeguard active</span>
+          <span><i class="swatch" style="background:var(--mist)"></i>automatic recommendation accepted</span>
+          <span><i class="swatch" style="background:var(--alert)"></i>hour with an N‑1 violation under policy A</span>
+        </div>
+        <p class="figcap">The ribbon shows why the safeguard can be neither permanent nor
+        uniform: risk concentrates in episodes, and the threshold decides how much of that
+        profile turns into effective conservatism.</p>
+      </div>
+    </section>
+
+    <section>
+      <h3>Week in detail</h3>
+      <p class="lead">Demand, available renewable resource, and capacity committed by each
+      policy during the selected week.</p>
+      <div class="ribbon-box">
+        <canvas id="week_c" height="230"></canvas>
+        <p class="figcap" id="weekcap"></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  Model equivalent to that of the <code>aerisk_fvlz</code> package (version 2.0). Thermal fleet
+  parameters, variable costs, and emission factors derived from fuel price, lower heating
+  value, net efficiency, and IPCC default factors (2006). Calibration magnitudes:
+  Red Eléctrica, <i>Comité Técnico de Seguimiento de la Operación del Sistema
+  Eléctrico de Canarias, enero–diciembre 2025</i> (March 2026). This in-browser
+  implementation uses double-precision arithmetic and the same decision rules, but a
+  pseudorandom generator different from <code>numpy</code>'s: the values do not match those of
+  the campaign digit by digit; the published figures are those of the article.
+</footer>
+</div>
+
+<script>
+"use strict";
+const H = 8760, NU = 16, Z90 = 1.2815515655446;
+const fmt = (x, d) => x.toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d});
+
+/* ------------------------------------------------------------------ parque */
+function fleet(){
+  const u = [], effD = [.440,.435,.430,.425,.418,.410], effD2 = [.438,.432,.427,.421,.414,.406];
+  const cost = (price, lhv, eff, om) => price/lhv/eff + om;
+  const emis = (ef, eff) => ef/eff;
+  for(let i=0;i<6;i++) u.push({node:0,pmax:22.30,pmin:22.30*.35,cvar:cost(480,11.25,effD[i],14),
+      ef:emis(.27864,effD[i]),ramp:22.30*.5,mu:4,md:3,sc:2800,fast:false});
+  u.push({node:0,pmax:37.50,pmin:37.50*.30,cvar:cost(750,11.86,.330,11),ef:emis(.26676,.330),ramp:37.5,mu:1,md:1,sc:1500,fast:true});
+  u.push({node:0,pmax:23.45,pmin:23.45*.30,cvar:cost(750,11.86,.315,11),ef:emis(.26676,.315),ramp:23.45,mu:1,md:1,sc:1500,fast:true});
+  for(let i=0;i<6;i++) u.push({node:1,pmax:17.40,pmin:17.40*.35,cvar:cost(480,11.25,effD2[i],14),
+      ef:emis(.27864,effD2[i]),ramp:17.40*.5,mu:4,md:3,sc:2800,fast:false});
+  u.push({node:1,pmax:23.45,pmin:23.45*.30,cvar:cost(750,11.86,.322,11),ef:emis(.26676,.322),ramp:23.45,mu:1,md:1,sc:1500,fast:true});
+  u.push({node:1,pmax:12.00,pmin:12.00*.30,cvar:cost(750,11.86,.300,11),ef:emis(.26676,.300),ramp:12.0,mu:1,md:1,sc:1500,fast:true});
+  return u;
+}
+const U = fleet();
+const MERIT = [...U.keys()].sort((a,b)=>U[a].cvar-U[b].cvar);
+const MERIT_R = [...MERIT].reverse();
+const FLIM = 120, FLIM_BKP = 30, VOLL = 10000, TAU = 0.30;
+const SHARE_LZ = 0.516;
+
+/* ------------------------------------------------------- generador aleatorio */
+function rng(seed){ let s = seed>>>0 || 1;
+  return ()=>{ s ^= s<<13; s>>>=0; s ^= s>>17; s ^= s<<5; s>>>=0; return s/4294967296; }; }
+function gauss(r){ let u=0,v=0; while(!u) u=r(); while(!v) v=r();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+const circ = (h,c)=>{ const d=Math.abs(h-c)%24; return Math.min(d,24-d); };
+
+/* ------------------------------------------------------------------- mundo */
+function buildWorld(seed, windMW, pvMW, ks){
+  const r = rng(seed*2654435761);
+  const D=new Float64Array(H), W=new Float64Array(H), V=new Float64Array(H);
+  const cfw=new Float64Array(H), cfp=new Float64Array(H), ev=new Uint8Array(H);
+  const flag=new Uint8Array(H), avail=new Uint8Array(H*NU).fill(1);
+
+  let nd=0, lat=0;
+  const phiD=0.985, sdD=0.030*ks, phiW=0.9865;
+  for(let i=0;i<H;i++){
+    const hod=i%24, doy=Math.floor(i/24), dow=doy%7;
+    nd = phiD*nd + gauss(r)*sdD*Math.sqrt(1-phiD*phiD);
+    lat = phiW*lat + gauss(r)*Math.sqrt(1-phiW*phiW);
+    const season = 1+0.100*Math.sin(2*Math.PI*(doy-205)/365);
+    const daily = 0.800 + 0.140*Math.exp(-Math.pow(circ(hod,13),2)/18)
+                        + 0.300*Math.exp(-Math.pow(circ(hod,20),2)/7.5)
+                        - 0.130*Math.exp(-Math.pow(circ(hod,4),2)/14);
+    const wk = (dow===5||dow===6)?0.962:1.0;
+    D[i] = Math.max(60, 211.357*season*daily*wk*(1+nd));
+    let c = 1/(1+Math.exp(-1.35*lat-0.10));
+    c *= 1+0.10*Math.sin(2*Math.PI*(doy-190)/365);
+    cfw[i] = Math.min(Math.max(c,0),0.97);
+    const elev = Math.max(0, Math.sin(Math.PI*(hod-6.75)/12.5));
+    const seas = 0.90+0.16*Math.sin(2*Math.PI*(doy-172)/365);
+    const clear = Math.min(1, Math.max(0.10, 1-Math.abs(gauss(r))*0.16*ks-((r()<0.075)?0.28:0)));
+    cfp[i] = Math.min(Math.max(elev*seas*clear,0),1);
+  }
+  // tail episodes: unanticipated wind drop
+  for(let e=0;e<18;e++){ const s=Math.floor(r()*(H-12)); for(let k=0;k<8;k++) ev[s+k]=1; }
+  const drop = Math.min(0.95, 0.45*ks);
+  const expect = Float64Array.from(cfw);
+  for(let i=0;i<H;i++) if(ev[i]) cfw[i]*=(1-drop);
+  // reescalado a los factores de carga objetivo
+  const scale=(a,t)=>{ let m=0; for(const x of a) m+=x; m/=a.length; const k=t/m;
+    for(let i=0;i<a.length;i++) a[i]=Math.min(a[i]*k,0.97); return k; };
+  const kw = scale(cfw,0.250); scale(cfp,0.175);
+  for(let i=0;i<H;i++){ W[i]=windMW*cfw[i]; V[i]=pvMW*cfp[i];
+    expect[i]=Math.min(expect[i]*kw,0.97);
+    flag[i] = (ev[i] ? (r()<0.80?1:0) : (r()<0.05?1:0)); }
+
+  // forecast: smoothed median of the expected resource plus forecast noise
+  const sm=a=>{const o=new Float64Array(H);for(let i=0;i<H;i++){let s=0,n=0;
+    for(let k=-2;k<=2;k++){const j=i+k; if(j>=0&&j<H){s+=a[j];n++;}} o[i]=s/n;} return o;};
+  const ew=sm(expect), ep=sm(cfp), ed=sm(D);
+  const hD=new Float64Array(H),hW=new Float64Array(H),hV=new Float64Array(H),sg=new Float64Array(H);
+  const sD=0.0255*1.162*ks, sW=0.130*1.378*ks, sP=0.095*0.789*ks;
+  for(let i=0;i<H;i++){
+    hD[i]=Math.max(0, ed[i]*(1+gauss(r)*0.010*ks));
+    hW[i]=Math.max(0, windMW*Math.min(0.97,Math.max(0, ew[i]+gauss(r)*0.045*ks)));
+    hV[i]=Math.max(0, pvMW*Math.min(1,Math.max(0, ep[i]+gauss(r)*0.030*ks)));
+    const a=sD*hD[i], b=sW*windMW, c=sP*pvMW*(cfp[i]>0.01?1:0.05);
+    sg[i]=Math.sqrt(a*a+b*b+c*c);
+  }
+  // indisponibilidades fortuitas: ~4 % anual por grupo
+  for(let u=0;u<NU;u++){ let rem=0.04*H*(0.6+0.8*r());
+    while(rem>0){ const dur=Math.max(6,Math.min(400,Math.round(-40*Math.log(1-r()))));
+      const s=Math.floor(r()*(H-1)); for(let k=0;k<dur&&s+k<H;k++) avail[(s+k)*NU+u]=0; rem-=dur; } }
+  return {D,W,V,hD,hW,hV,sg,flag,avail};
+}
+
+/* ------------------------------------------------ criterio de seguridad N-1 */
+function secureOK(cl,cf,bl,bf,nl,nf,flim){
+  const e=1e-6;
+  if(cl+flim+e<nl) return false;
+  if(cf+flim+e<nf) return false;
+  const big = bl>=bf?bl:bf;
+  if(cl+cf-big+e<nl+nf) return false;
+  if(cl-bl+flim+e<nl) return false;
+  if(cf-bf+flim+e<nf) return false;
+  return true;
+}
+function erfc(x){ // Abramowitz–Stegun approximation 7.1.26, |ε| < 1.5·10⁻⁷
+  const z=Math.abs(x), t=1/(1+0.5*z);
+  const y=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+
+    t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+
+    t*(-0.82215223+t*0.17087277)))))))));
+  return x>=0?y:2-y;
+}
+
+/* ------------------------------------------------------------- simulation */
+function simulate(w, mode, rhoOn, keep){
+  const on=new Uint8Array(NU), upT=new Int16Array(NU), dnT=new Int16Array(NU);
+  const pPrev=new Float64Array(NU);
+  for(let k=0;k<5;k++){ on[MERIT[k]]=1; upT[MERIT[k]]=10; }
+  for(let u=0;u<NU;u++){ if(!on[u]) dnT[u]=10; else pPrev[u]=U[u].pmin; }
+  const rhoOff=rhoOn*0.4, DWELL=4;
+  let fuel=0,start=0,ensC=0,co2=0,ens=0,curt=0,viol=0,gateH=0,starts=0;
+  let hold=0, armed=false;
+  const rho = keep?new Float32Array(H):null, gtr = keep?new Uint8Array(H):null;
+  const atr = keep?new Uint8Array(H):null, cap = keep?new Float32Array(H):null;
+  const tmp=new Uint8Array(NU);
+
+  function commit(base, off, nTot, sL, flim){
+    tmp.set(base);
+    let cl=0,cf=0,bl=0,bf=0;
+    for(let u=0;u<NU;u++) if(tmp[u]&&w.avail[off+u]){
+      if(U[u].node===0){cl+=U[u].pmax; if(U[u].pmax>bl)bl=U[u].pmax;}
+      else {cf+=U[u].pmax; if(U[u].pmax>bf)bf=U[u].pmax;} }
+    const nl=nTot*sL, nf=nTot-nl;
+    let guard=0;
+    while(!secureOK(cl,cf,bl,bf,nl,nf,flim)){
+      if(++guard>NU+2) break;
+      const dl=nl-(cl-bl+flim), df=nf-(cf-bf+flim);
+      const prefer = dl>=df?0:1;
+      let cand=-1;
+      for(const u of MERIT) if(!tmp[u]&&w.avail[off+u]&&dnT[u]>=U[u].md&&U[u].node===prefer){cand=u;break;}
+      if(cand<0) for(const u of MERIT) if(!tmp[u]&&w.avail[off+u]&&dnT[u]>=U[u].md){cand=u;break;}
+      if(cand<0) break;
+      tmp[cand]=1;
+      if(U[cand].node===0){cl+=U[cand].pmax; if(U[cand].pmax>bl)bl=U[cand].pmax;}
+      else {cf+=U[cand].pmax; if(U[cand].pmax>bf)bf=U[cand].pmax;}
+    }
+    return {cl,cf,bl,bf};
+  }
+
+  for(let i=0;i<H;i++){
+    const off=i*NU, flim=FLIM, sL=SHARE_LZ;
+    const nhat=Math.max(0, w.hD[i]-w.hW[i]-w.hV[i]), s=w.sg[i];
+
+    // 1. automatic recommendation
+    const base=Uint8Array.from(on);
+    let g=commit(base,off,nhat,sL,flim);
+    const autoOn=Uint8Array.from(tmp);
+    const bigA=Math.max(g.bl,g.bf);
+    const rh = s>1e-9 ? 0.5*erfc(((g.cl+g.cf-bigA-nhat)/s)/Math.SQRT2) : 0;
+    if(keep) rho[i]=rh;
+
+    // 2. requirement per policy
+    const nRob=nhat+Z90*s;
+    let chosen, cl,cf,bl,bf, nRel, fired=false;
+    if(mode==="A"){ chosen=autoOn; ({cl,cf,bl,bf}=g); nRel=nhat; }
+    else if(mode==="B"){
+      const trig=(rh>rhoOn)||(w.flag[i]===1);
+      if(trig){armed=true;hold=DWELL;} else if(armed&&hold<=0&&rh<rhoOff) armed=false;
+      if(hold>0) hold--;
+      fired=armed;
+      if(fired){ g=commit(base,off,nRob,sL,flim); chosen=Uint8Array.from(tmp); }
+      else chosen=autoOn;
+      ({cl,cf,bl,bf}=g); nRel=nRob;
+    } else if(mode==="D"){ g=commit(base,off,nRob,sL,flim); chosen=Uint8Array.from(tmp);
+      ({cl,cf,bl,bf}=g); nRel=nRob; }
+    else { const nC=nRob+0.05*w.hD[i]; g=commit(base,off,nC,sL,flim);
+      chosen=Uint8Array.from(tmp); ({cl,cf,bl,bf}=g); nRel=nC; }
+    if(fired){ gateH++; if(keep) gtr[i]=1; }
+
+    // 3. full billing of start-ups
+    for(let u=0;u<NU;u++) if(chosen[u]&&!on[u]){ start+=U[u].sc; starts++; upT[u]=0; dnT[u]=0; }
+    on.set(chosen);
+
+    // 4. release under the robust criterion (non-relaxation ratchet)
+    const nlx=nRel*sL, nfx=nRel-nlx;
+    let nOn=0; for(let u=0;u<NU;u++) if(on[u]&&w.avail[off+u]) nOn++;
+    for(const u of MERIT_R){
+      if(nOn<=2) break;
+      if(!(on[u]&&w.avail[off+u])) continue;
+      if(upT[u]<U[u].mu) continue;
+      const cl2 = U[u].node===0?cl-U[u].pmax:cl, cf2 = U[u].node===1?cf-U[u].pmax:cf;
+      let b1=0,b2=0;
+      for(let v=0;v<NU;v++) if(on[v]&&w.avail[off+v]&&v!==u){
+        if(U[v].node===0){ if(U[v].pmax>b1) b1=U[v].pmax; } else { if(U[v].pmax>b2) b2=U[v].pmax; } }
+      if(secureOK(cl2,cf2,b1,b2,nlx,nfx,flim)){
+        on[u]=0; upT[u]=0; dnT[u]=0; cl=cl2; cf=cf2; bl=b1; bf=b2; nOn--; }
+    }
+
+    // 5. tiempo real
+    const dl=w.D[i]*SHARE_LZ, df=w.D[i]-dl;
+    const res=w.W[i]+w.V[i], resL=res*0.42, resF=res-resL;
+    let pminL=0,pminF=0,pmaxL=0,pmaxF=0;
+    for(let u=0;u<NU;u++) if(on[u]&&w.avail[off+u]){
+      if(U[u].node===0){pminL+=U[u].pmin;pmaxL+=U[u].pmax;} else {pminF+=U[u].pmin;pmaxF+=U[u].pmax;} }
+    let useL=Math.max(0,Math.min(resL, dl-pminL+flim)), useF=Math.max(0,Math.min(resF, df-pminF+flim));
+    const roomSys=Math.max(0, dl+df-pminL-pminF);
+    if(useL+useF>roomSys){ const k=roomSys/(useL+useF); useL*=k; useF*=k; }
+    curt += res-useL-useF;
+    const netL=dl-useL, netF=df-useF, net=netL+netF;
+
+    let ensI=0;
+    let short=net-(pmaxL+pmaxF);
+    if(short>1e-6){
+      let resc=short;
+      for(const u of MERIT){ if(resc<=1e-6) break;
+        if(!on[u]&&w.avail[off+u]&&U[u].fast&&dnT[u]>=U[u].md){
+          on[u]=1; upT[u]=0; dnT[u]=0; start+=U[u].sc; starts++;
+          if(U[u].node===0){pmaxL+=U[u].pmax;pminL+=U[u].pmin;cl+=U[u].pmax;if(U[u].pmax>bl)bl=U[u].pmax;}
+          else {pmaxF+=U[u].pmax;pminF+=U[u].pmin;cf+=U[u].pmax;if(U[u].pmax>bf)bf=U[u].pmax;}
+          resc=Math.max(0, net-(pmaxL+pmaxF)); } }
+      ensI=Math.max(0,(short-resc)*TAU+resc);
+    }
+    ens+=ensI;
+    let rem=net-ensI;
+    const outp=new Float64Array(NU);
+    for(let u=0;u<NU;u++) if(on[u]&&w.avail[off+u]){
+      const lo=Math.min(U[u].pmax, Math.max(U[u].pmin, pPrev[u]-U[u].ramp));
+      outp[u]=lo; rem-=lo; }
+    if(rem>0){ for(const u of MERIT){ if(rem<=1e-9) break;
+      if(!(on[u]&&w.avail[off+u])) continue;
+      const hi=Math.max(outp[u], Math.min(U[u].pmax, pPrev[u]+U[u].ramp));
+      const add=Math.min(hi-outp[u], rem); outp[u]+=add; rem-=add; } }
+    else if(rem<0){ for(const u of MERIT_R){ if(rem>=-1e-9) break;
+      if(!(on[u]&&w.avail[off+u])) continue;
+      const red=Math.min(outp[u]-U[u].pmin, -rem); if(red>0){ outp[u]-=red; rem+=red; } } }
+    for(let u=0;u<NU;u++){ if(outp[u]>0){ fuel+=U[u].cvar*outp[u]; co2+=U[u].ef*outp[u]; } }
+    ensC+=VOLL*ensI;
+
+    // 6. indicador de incumplimiento sobre el estado realizado
+    let rl=0,rf=0,b1=0,b2=0;
+    for(let u=0;u<NU;u++) if(on[u]&&w.avail[off+u]){
+      if(U[u].node===0){rl+=U[u].pmax; if(U[u].pmax>b1)b1=U[u].pmax;}
+      else {rf+=U[u].pmax; if(U[u].pmax>b2)b2=U[u].pmax;} }
+    const ok=secureOK(rl,rf,b1,b2,netL,netF,flim);
+    if(!ok||ensI>1e-9){ viol++; if(keep) atr[i]=1; }
+    if(keep) cap[i]=rl+rf;
+
+    for(let u=0;u<NU;u++){ if(on[u]&&w.avail[off+u]){ upT[u]++; dnT[u]=0; pPrev[u]=outp[u]; }
+      else { dnT[u]++; upT[u]=0; pPrev[u]=0; } }
+  }
+  let dsum=0; for(const x of w.D) dsum+=x;
+  let rsum=0; for(let i=0;i<H;i++) rsum+=w.W[i]+w.V[i];
+  return {mode, cost:(fuel+start+ensC)/1e6, ens, curt:curt/1e3, co2:co2/1e3,
+          viol, gateH, starts, share:100*(rsum-curt)/dsum, rho, gtr, atr, cap};
+}
+
+/* ------------------------------------------------------------------ interfaz */
+const $ = id => document.getElementById(id);
+const state = {results:null, world:null};
+
+const weekSel = $("week");
+for(let m=0;m<52;m++){ const o=document.createElement("option");
+  o.value=m; o.textContent=`Semana ${m+1}`; weekSel.appendChild(o); }
+weekSel.value = 28;
+
+function syncLabels(){
+  $("windV").textContent = fmt(+$("wind").value,1)+" MW";
+  $("pvV").textContent   = fmt(+$("pv").value,1)+" MW";
+  $("ksV").textContent   = fmt(+$("ks").value,2);
+  $("rhoV").textContent  = fmt(+$("rho").value,2);
+  $("seedV").textContent = $("seed").value;
+}
+["wind","pv","ks","rho","seed"].forEach(id=>$(id).addEventListener("input",syncLabels));
+syncLabels();
+
+$("pS0").addEventListener("click",()=>{ $("wind").value=106; $("pv").value=61;
+  $("pS0").setAttribute("aria-pressed","true"); $("pS1").setAttribute("aria-pressed","false");
+  syncLabels(); });
+$("pS1").addEventListener("click",()=>{ $("wind").value=365; $("pv").value=212;
+  $("pS1").setAttribute("aria-pressed","true"); $("pS0").setAttribute("aria-pressed","false");
+  syncLabels(); });
+weekSel.addEventListener("change",()=>{ if(state.results) drawWeek(); });
+
+$("run").addEventListener("click",()=>{
+  const btn=$("run"); btn.disabled=true; $("status").textContent="Simulating 8,760 hours…";
+  setTimeout(()=>{
+    const t0=performance.now();
+    const w=buildWorld(+$("seed").value, +$("wind").value, +$("pv").value, +$("ks").value);
+    const rho=+$("rho").value;
+    const res={A:simulate(w,"A",rho,true), B:simulate(w,"B",rho,true),
+               D:simulate(w,"D",rho,true), C:simulate(w,"C",rho,true)};
+    state.world=w; state.results=res;
+    renderTable(); drawRibbon(); drawWeek();
+    $("status").textContent=`Completado en ${Math.round(performance.now()-t0)} ms.`;
+    btn.disabled=false;
+  },30);
+});
+
+const NAMES={A:"A · automatic",B:"B · safeguarded",D:"D · robust",C:"C · conservative"};
+function renderTable(){
+  const tb=$("tbl").querySelector("tbody"); tb.innerHTML="";
+  const r=state.results, ks=["A","B","D","C"];
+  const best=(k,lower=true)=>{const v=ks.map(p=>r[p][k]);return lower?Math.min(...v):Math.max(...v);};
+  const worst=(k)=>Math.max(...ks.map(p=>r[p][k]));
+  for(const p of ks){
+    const x=r[p], tr=document.createElement("tr"); tr.className="pol-"+p;
+    const cell=(v,d,k)=>{const td=document.createElement("td"); td.className="num";
+      td.textContent=fmt(v,d);
+      if(k&&v===best(k)) td.classList.add("best");
+      if(k&&v===worst(k)&&worst(k)!==best(k)) td.classList.add("worst");
+      return td;};
+    const nm=document.createElement("td"); nm.textContent=NAMES[p]; tr.appendChild(nm);
+    tr.appendChild(cell(x.cost,2,"cost"));
+    tr.appendChild(cell(x.viol,0,"viol"));
+    tr.appendChild(cell(x.ens,1,"ens"));
+    tr.appendChild(cell(x.curt,1,"curt"));
+    tr.appendChild(cell(x.co2,1,"co2"));
+    tr.appendChild(cell(x.starts,0));
+    tr.appendChild(cell(100*x.gateH/H,1));
+    tb.appendChild(tr);
+  }
+}
+
+function hidpi(cv, h){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth;
+  cv.width=w*dpr; cv.height=h*dpr; cv.style.height=h+"px";
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h); return {g,w,h};
+}
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function drawRibbon(){
+  const {g,w,h}=hidpi($("ribbon"),150);
+  const r=state.results.B, a=state.results.A;
+  const pad=26, W=w-pad-6, H0=h-22;
+  for(let x=0;x<W;x++){
+    const i0=Math.floor(x/W*H), i1=Math.max(i0+1,Math.floor((x+1)/W*H));
+    let mx=0, gate=0, adv=0;
+    for(let i=i0;i<i1;i++){ if(r.rho[i]>mx) mx=r.rho[i]; gate+=r.gtr[i]; adv+=a.atr[i]; }
+    const hh=Math.min(1,mx/0.5)*H0;
+    g.fillStyle = gate>0 ? css("--trade") : css("--mist");
+    g.fillRect(pad+x, h-16-hh, 1, hh);
+    if(adv>0){ g.fillStyle=css("--alert"); g.fillRect(pad+x, h-15, 1, 4); }
+  }
+  const rho=+$("rho").value, y=h-16-Math.min(1,rho/0.5)*H0;
+  g.strokeStyle=css("--basalt"); g.lineWidth=1; g.setLineDash([4,3]);
+  g.beginPath(); g.moveTo(pad,y); g.lineTo(w-6,y); g.stroke(); g.setLineDash([]);
+  g.fillStyle=css("--basalt"); g.font="10px "+css("--mono");
+  g.fillText("ρ_on", pad+3, y-4);
+  g.fillStyle=css("--slate"); g.textAlign="right";
+  g.fillText("0,5", pad-4, h-16-H0+8); g.fillText("0", pad-4, h-14);
+  g.textAlign="left";
+  const meses=["E","F","M","A","M","J","J","A","S","O","N","D"];
+  meses.forEach((m,k)=>{ g.fillText(m, pad+(k+0.5)/12*W-3, h-3); });
+}
+
+function drawWeek(){
+  const {g,w,h}=hidpi($("week_c"),230);
+  const wk=+weekSel.value, i0=wk*168, n=168;
+  const wo=state.world, res=state.results;
+  const padL=42, padB=26, W=w-padL-10, H0=h-padB-14;
+  let mx=0;
+  for(let i=i0;i<i0+n;i++) mx=Math.max(mx, wo.D[i], wo.W[i]+wo.V[i], res.A.cap[i], res.C.cap[i]);
+  mx=Math.ceil(mx/50)*50;
+  const X=i=>padL+(i-i0)/n*W, Y=v=>14+H0-v/mx*H0;
+  g.strokeStyle=css("--mist"); g.lineWidth=1; g.fillStyle=css("--slate");
+  g.font="10px "+css("--mono"); g.textAlign="right";
+  for(let v=0; v<=mx; v+=Math.max(50,Math.round(mx/5/50)*50)){
+    g.beginPath(); g.moveTo(padL,Y(v)); g.lineTo(w-10,Y(v)); g.stroke();
+    g.fillText(String(v), padL-5, Y(v)+3); }
+  g.textAlign="left";
+  const line=(get,color,dash,lw)=>{ g.strokeStyle=color; g.lineWidth=lw||1.4;
+    g.setLineDash(dash||[]); g.beginPath();
+    for(let i=i0;i<i0+n;i++){ const x=X(i), y=Y(get(i)); i===i0?g.moveTo(x,y):g.lineTo(x,y); }
+    g.stroke(); g.setLineDash([]); };
+  g.fillStyle="rgba(31,111,139,.13)"; g.beginPath(); g.moveTo(X(i0),Y(0));
+  for(let i=i0;i<i0+n;i++) g.lineTo(X(i),Y(wo.W[i]+wo.V[i]));
+  g.lineTo(X(i0+n-1),Y(0)); g.closePath(); g.fill();
+  line(i=>res.A.cap[i], css("--alert"), [3,2]);
+  line(i=>res.B.cap[i], css("--trade"), []);
+  line(i=>res.C.cap[i], css("--slate"), [1,2]);
+  line(i=>wo.D[i], css("--basalt"), [], 1.8);
+  for(let i=i0;i<i0+n;i++) if(res.A.atr[i]){ g.fillStyle="rgba(178,58,46,.85)";
+    g.fillRect(X(i)-0.5, 14+H0+3, 1.6, 5); }
+  const dias=["M","T","W","T","F","S","S"];
+  g.fillStyle=css("--slate"); g.font="10px "+css("--mono");
+  for(let d=0;d<7;d++) g.fillText(dias[d], X(i0+d*24+11), h-9);
+  $("weekcap").innerHTML =
+    "Thick line: demand. Blue area: available renewable resource. "+
+    "Dashes: capacity committed by policies <b style='color:"+css("--alert")+"'>A</b>, "+
+    "<b style='color:"+css("--trade")+"'>B</b> and <b style='color:"+css("--slate")+"'>C</b>. "+
+    "The red marks at the bottom flag the hours in which policy A violates the N‑1 criterion.";
+}
+
+$("run").click();
+window.addEventListener("resize",()=>{ if(state.results){ drawRibbon(); drawWeek(); } });
+</script>
+</body>
+</html>
